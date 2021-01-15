@@ -7,7 +7,7 @@ jobs:
   main:
     runs-on: ubuntu-latest
     steps:
-      - if: github.event.pull_request.head.ref === 'master'
+      - if: github.event.pull_request.head.ref == 'master'
         run: exit 0
-      - if: github.event.pull_request.head.ref !== 'master'
+      - if: github.event.pull_request.head.ref != 'master'
         run: exit 1
