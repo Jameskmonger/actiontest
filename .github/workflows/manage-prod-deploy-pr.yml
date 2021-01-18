@@ -18,7 +18,10 @@ jobs:
                 pullRequests(baseRefName: "master", headRefName: "develop", states: [OPEN], first: 1) {
                   nodes {
                     number,
-                    body
+                    body,
+                    commits(first: 5) {
+                      totalCount
+                    }
                   }
                 }
               }
@@ -34,6 +37,7 @@ jobs:
           json: ${{ steps.get_production_pr_number.outputs.data }}
           number: "repository.pullRequests.nodes[0].number"
           body: "repository.pullRequests.nodes[0].body"
+          commit_count: "repository.pullRequests.nodes[0].commits.totalCount"
       - name: Get first line of commit message
         id: get_commit_message
         uses: actions/github-script@v3
@@ -64,36 +68,9 @@ jobs:
         env:
           COMMIT_MSG: ${{ steps.get_commit_message.outputs.result }}
           AUTHOR_USERNAME: ${{ github.event.commits[0].author.username }}
-      # NEW__________________________________________________
-      - name: If Production PR exists, count commits
-        if: ${{ steps.pull_requests_json.outputs.number }}
-        id: get_prod_pr_commits
-        uses: octokit/graphql-action@v2.x
-        with:
-          query: |
-            query release($owner:String!,$repo:String!) {
-              repository(owner:$owner,name:$repo) {
-                pullRequests(baseRefName: "master", headRefName: "develop", states: [OPEN], first: 1) {
-                  nodes {
-                    commits(first: 5) {
-                      totalCount
-                    }
-                  }
-                }
-              }
-            }
-          owner: ${{ github.event.repository.owner.name }}
-          repo: ${{ github.event.repository.name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Parse response to JSON
-        id: get_prod_pr_commits_json
-        uses: gr2m/get-json-paths-action@v1.x
-        with:
-          json: ${{ steps.check_prod_pr_full.outputs.data }}
-          count: "repository.pullRequests.nodes[0].commits.totalCount"
       - name: Update Production PR if one exists and isn't full
-        if: ${{ steps.pull_requests_json.outputs.number && steps.get_prod_pr_commits_json.outputs.count < 5 }}
+        # NEW____________________________________________________________
+        if: ${{ steps.pull_requests_json.outputs.number && steps.pull_requests_json.outputs.commit_count < 5 }}
         # END NEW____________________________________________________________
         uses: actions/github-script@v3
         with:
